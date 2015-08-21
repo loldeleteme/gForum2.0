@@ -55,9 +55,8 @@ function ConnectDb()
 	else return end
 end
 
---[[
-
-	-- FOR DARKRP !!!!!
+if DarkRP then
+	
 	hook.Add("DarkRPFinishedLoading", "DBConnection", ConnectDb);
 
 	hook.Add("PostPlayerSay", "PostPlayerSay.ChatCommands", function(p, t)
@@ -71,8 +70,8 @@ end
 		end
 	end);
 
-	-- IF YOU ARE USING DARKRP REMOVE THE NEXT TWO HOOKS!
-]]
+else
+
 	hook.Add("InitPostEntity", "DBConnection", ConnectDb);
 
 	hook.Add("PlayerSay", "PlayerSay.ChatCommands", function(p, text)
@@ -85,6 +84,8 @@ end
 			p:ChatPrint("[gForum] You can unlink or logout of your account with !unlink or !logout.");
 		end
 	end);
+
+end
 
 hook.Add("PlayerInitialSpawn", "PlayerInitialSpawn.GetUser", function(p)
 	p:ChatPrint("[gForum] Welcome to "..Community..", Please register on our forum by typing !login or !register")
