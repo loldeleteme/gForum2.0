@@ -108,6 +108,13 @@ Register = false;
 CheckDB = false;
 
 --[[
+        DarkRP is a boolean, when set to true it will know to use
+        DarkRP specific hooks.
+--]]
+
+DarkRP = false;
+
+--[[
         vers is the version of gForum2.0, modifying this does nothing.
 --]]
 
