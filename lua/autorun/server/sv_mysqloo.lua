@@ -94,7 +94,87 @@ function Registration( self, user, pass, email, group, regdate )
 
 		elseif Forum == "ipb" then
 
-				--[[ TODO IPB ]]--
+				local q1 = db:query("SELECT `name` FROM " .. Prefix .. "_members WHERE `name`='" .. user .. "'");
+
+					q1.onError = function(e,sql)
+						print("[gForum] Query q1 Errored! \n [gForum] Query: " .. sql .. " \n [gForum] Error: " .. e);
+					end
+
+					q1.onSuccess = function(q,d)
+						local q1Data = q:getData()[1] or nil;
+						if q1Data or q1Data['name'] == user then
+							net.Start("gforum_register");
+							net.Send(self);
+							net.Start("gforum_error");
+								net.WriteString("Notice!!; This username is taken.");
+							net.Send(self);
+							self.Halt = true;
+							timer.Simple(3, function()
+									self.Halt = false;
+							end);
+							return
+						end
+					end
+				q1:start();
+
+				salt = Salt(self, 5);
+				local key = Salt(self, 32);
+				hash = pass;
+				local q2 = db:query(database:query("SELECT MD5('" .. escape(salt) .. "')");
+					
+					q2.onError = function(_e,_sql)
+						print("[gForum] Query q2 Errored! \n [gForum] Query: " .. _sql .. " \n [gForum] Error: " .. _e);
+					end
+
+					q2.onSuccess = function(_q,_d)
+						for k,v in pairs(_q:getData()[1]) do
+							local q3 = db:query("SELECT MD5('" .. escape(hash) .. "')");
+
+								q3.onError = function(__e,__sql)
+									print("[gForum] Query q3 Errored! \n [gForum] Query: " .. __sql .. " \n [gForum] Error: " .. __e);
+								end
+
+								q3.onSuccess = function(__q,__d)
+									for _k,_v in pairs(__q:getData()[1]) do
+
+										local q4 = db:query("SELECT MD5('" .. escape(v .. _v) .. "')");
+												
+												q4.onError = function(___e,___sql)
+													print("[gForum] Query q4 Errored! \n [gForum] Query: " .. ___sql .. " \n [gForum] Error: " .. ___e);
+												end
+
+												q4.onSuccess = function(___q,___d)
+													for __k,__v in pairs(___q:getData()[1]) do
+														hash = __v;
+														if self.Halt then return end
+														local q5 = db:query("INSERT INTO " .. Prefix .. "_members (`name`, `member_group_id`, `email`, `joined`, `ip_address`, `title`, `member_login_key`, `members_display_name`, `members_seo_name`, `members_l_display_name`, `members_l_username`, `members_pass_hash`, `members_pass_salt`) VALUES('" .. escape(user) .. "', '" .. group .. "', '" .. escape(email) .. "', '" .. regdate .. "', '" .. escape(self:IPAddress()) .. "', '" .. escape(user) .. "', '" .. escape(key) .. "', '" .. escape(user) .. "', '" .. escape(user) .. "', '" .. escape(user) .. "', '" .. escape(user) .. "', '" .. escape(hash) .. "', '" .. escape(salt) .. "' )");
+
+															q5.onError = function(____e,____sql)
+																print("[gForum] Query q5 Errored! \n [gForum] Query: " .. ____sql .. " \n [gForum] Error: " .. ____e);
+															end
+
+															q5.onSuccess = function(____q,____d)
+																self:ChatPrint("[gForum] IPB -- Successfully registered user, "..user);
+																LinkAccount(self,user,pass);
+																self.Registered = true;
+															end
+														q5:start();
+														
+														break
+													end
+												end
+										q4:start()
+
+										break
+
+									end
+								end
+							q3:start();
+
+							break
+						end
+					end
+				q2:start();
 
 		elseif Forum == "xen" then
 
@@ -106,7 +186,7 @@ function Registration( self, user, pass, email, group, regdate )
 
 		else
 
-				print("[gForum] This addon currently only supports SMF, Xenforo, IPB, MyBB, and PhpBB.  Create a request in the github");
+				print("[gForum] This addon currently only supports SMF, Xenforo, IPB, MyBB, and PhpBB.  I can add new forum types or your custom forum.  Contact me at Septharoth@rebornservers.com");
 
 		end
 
@@ -212,13 +292,89 @@ function GetUser( self )
 
 		elseif Forum == "ipb" then
 
+			local q1 = db:query("SELECT `id` FROM " .. Prefix .. "_link WHERE `steamid`='" .. self:SteamID() .. "'");
+				q1.onError = function(e,sql)
+					print("[gForum] Query q1 Errored! \n [gForum] Query: "..sql.."\n [gForum] Error: "..e);
+				end
+
+				q1.onSuccess = function(q,d)
+					local q1Data = q:getData()[1] or nil;
+					if q1Data then
+						self.Registered = true;
+						self:ChatPrint("[gForum] Welcome Back, " .. self:Nick() .. ", Remember to check out the forum at "..URL);
+						local q2 = db:query("SELECT `member_id`, `name`, `member_group_id`, `posts`, `title` FROM " .. Prefix .. "_members WHERE `member_id`='" .. q1Data['id'] .. "'");
+							q2.onError = function(_e,_sql)
+								print("[gForum] Query q2 Errored! \n [gForum] Query: ".._sql.."\n [gForum] Error: ".._e);
+							end
+
+							q2.onSuccess = function(_q,_d)
+								local q2Data = _q:getData()[1] or nil;
+								if q2Data['member_id'] then
+									if Alias then
+										if q2Data['title'] != self:Nick() then
+											local q3 = db:query("UPDATE " .. Prefix .. "_members SET `title`='" .. escape(self:Nick()) .."' WHERE `member_id`='" .. q1Data['id'] .. "'");
+												q3.onError = function(__e,__sql)
+													print("[gForum] Query q3 Errored! \n [gForum] Query: "..__sql.."\n [gForum] Error: "..__e);
+												end
+
+											q3:start();
+										end
+									end
+									local q4 = db:query("SELECT `g_title`, `g_id` FROM " .. Prefix .. "_groups WHERE `g_id`='" .. q2Data['member_group_id'] .. "'");
+										q4.onError = function(__e,__sql)
+											print("[gForum] Query q4 Errored! \n [gForum] Query: "..__sql.."\n [gForum] Error: "..__e);
+										end
+
+										q4.onSuccess = function(__q,__d)
+											local q4Data = __q:getData()[1] or nil;
+											if q4Data['g_title'] then
+												group = "Members";
+											else
+												group = q4Data['g_title'];
+											end
+											net.Start("gforum_setinfo");
+												net.WriteStrng(q2Data['name']);
+												net.WriteString(group);
+												net.WriteString(URL);
+											net.Send(self);		
+
+											local tbl = { self:Nick(), q2Data['name'], self:UniqueID(), q2Data['id'] };
+											ForumUsers[q1Data['id']] = tbl;
+
+											net.Start("gforum_users");
+												net.WriteTable(ForumUsers);
+											net.Send(self);
+
+											if Admin then
+												CheckUserGroup(self, q2Data['member_id'], q4Data['g_id'], q4Data['g_title']);
+											end
+										end
+									q4:start();
+								end
+							end
+						q2:start();
+					else
+						self.Registered = false;
+						net.Start("gforum_register");
+						net.Send(self);
+						net.Start("gforum_error");
+							net.WriteString("Notice!!;Please register for or link your forum account.");
+						net.Send(self);
+					end
+				end
+			q1:start();
+
 		elseif Forum == "xen" then
+
+			--[[ TODO: XENFORO ]]--
 
 		elseif Forum == "phpbb" then
 
+			--[[ TODO: PHPBB ]]--
+
 		else 
 
-			print("[gForum] This addon currently only supports SMF, Xenforo, IPB, MyBB, and PhpBB.  Make a request in the github");
+			print("[gForum] This addon currently only supports SMF, Xenforo, IPB, MyBB, and PhpBB.  I can add new forum types or your custom forum.  Contact me at Septharoth@rebornservers.com");
 
 		end
 end
@@ -335,6 +491,103 @@ function LinkAccount(self, name, pass)
 	elseif Forum == "mybb" then
 
 	elseif Forum == "ipb" then
+
+		hash = string.lower(tostring(pass));
+		local q1 = db:query("SELECT `id` FROM " .. Prefix .. "_link WHERE `steamid`='" .. self:SteamID() .. "'");
+			q1.onError = function(e,sql)
+				print("[gForum] Query q1 Errored! \n [gForum] Query: "..sql.."\n [gForum] Error: "..e);
+			end
+
+			q1.onSuccess = function(q,d)
+				local q1Data = q:getData()[1] or nil;
+				if q1Data then
+					self:Registered = true;
+					self:ChatPrint("[gForum] IPB -- You've already linked your account.");
+				else
+					local q2 = db:query("SELECT `member_id`, `name`, `members_pass_hash`, `members_pass_salt` FROM " .. Prefix .. "_members WHERE `name`='" .. name .. "'");
+						q2.onError = function(_e,_sql)
+							print("[gForum] Query q2 Errored! \n [gForum] Query: ".._sql.."\n [gForum] Error: ".._e);
+						end
+
+						q2.onSucces = function(_q,_d)
+							local q2Data = _q:getData()[1] or nil;
+							if q2Data then
+								local q = db:query("SELECT `id` FROM " .. Prefix .. "_link WHERE `id`='" .. q2Data['member_id'] .. "'");
+									q.onSuccess = function(__q,__d)
+										local qData = __q:getData()[1] or nil;
+										if qData and qData['id'] then
+											net.Start("gforum_link");
+											net.Send(self);
+											net.Start("gforum_error");
+												net.WriteString("Notice!!; That account was already linked.");
+											net.Send(self);
+											return
+										else
+											local q3 = db:query("SELECT MD5('" .. escape(q2Data['members_pass_salt']) .. "')");
+												q3.onError = function(__e,__sql)
+													print("[gForum] Query q3 Errored! \n [gForum] Query: "..__sql.."\n [gForum] Error: "..__e);
+												end
+
+												q3.onSuccess = function(__q,__d)
+													for k,v in pairs(__q:getData()[1]) do
+														local q4 = db:query("SELECT MD5('" .. escape(hash) .. "')");
+															q4.onError = function(___e,___sql)
+																print("[gForum] Query q4 Errored! \n [gForum] Query: "..___sql.."\n [gForum] Error: "..___e);
+															end
+
+															q4.onSuccess = function(___q,___d)
+																for _k,_v in pairs(___q:getData()[1]) do
+																	local q5 = db:query("SELECT MD5('" .. escape(v ..  _v) .. "')");
+																		q5.onError = function(____e,____sql)
+																			print("[gForum] Query q5 Errored! \n [gForum] Query: "..____sql.."\n [gForum] Error: "..____e);
+																		end
+
+																		q5.onSuccess = function(____q,____d)
+																			for __k,__v in pairs(____q:getData()[1]) do
+																				hash = string.lower(__v);
+																				if q2Data['member_pass_hash'] == hash then
+																					local q6 = db:query("INSERT INTO " .. Prefix .. "_link (`id`, `steamid`) VALUES('" .. escape(q2Data['member_id']) .. "', '" .. escape(self:SteamID()) .. "')");
+																							q6.onError = function(_____e,_____sql)
+																								print("[gForum] Query q6 Errored! \n [gForum] Query: ".._____sql.."\n [gForum] Error: ".._____e);
+																							end
+
+																							q6.onSuccess = function(_____q,_____d)
+																								self:ChatPrint("[gForum] IPB -- Your account has been linked!");
+																								timer.Simple(3, function()
+																									GetUser(self);
+																								end);
+																							end
+
+																					q6:start();
+
+																				elseif q2Data['members_pass_hash'] != hash then
+																					net.Start("gforum_link");
+																					net.Send(self);
+																					net.Start("gforum_error");
+																						net.WriteString("Notice!!;You entered an invalid password.");
+																					net.Send(self);
+																				end
+																				break
+																			end
+																		end
+																	q5:start();
+																	break
+																end
+															end
+														q4:start();
+														break
+													end
+												end
+											q3:start();
+										end
+									end
+								q:start();
+							end
+						end
+					q2:start();
+				end
+			end
+		q1:start();
 
 	elseif Forum == "xen" then
 
